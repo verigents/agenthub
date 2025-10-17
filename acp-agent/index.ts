@@ -3,316 +3,150 @@ import AcpClient, {
   AcpContractClientV2,
   AcpJob,
   AcpJobPhases,
-  AcpMemo,
-  baseAcpConfigV2,
-  Fare,
-  FareAmount,
-  MemoType,
 } from "@virtuals-protocol/acp-node";
-import { Address } from "viem";
-import { createHash } from "crypto";
-import {
-  SELLER_AGENT_WALLET_ADDRESS,
-  SELLER_ENTITY_ID,
-  WHITELISTED_WALLET_PRIVATE_KEY,
-} from "./env";
-import {
-  TpSlConfig,
-  V2DemoClosePositionPayload,
-  V2DemoOpenPositionPayload,
-  V2DemoSwapTokenPayload,
-} from "./jobTypes";
-import readline from "readline";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { AgentExecutor, createOpenAIFunctionsAgent, createToolCallingAgent } from "langchain/agents";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { Tool } from "@langchain/core/tools";
 
 dotenv.config();
 
-const config = baseAcpConfigV2;
-
-enum JobName {
-  OPEN_POSITION = "open_position",
-  CLOSE_POSITION = "close_position",
-  SWAP_TOKEN = "swap_token",
+function cleanJobData(job: any) {
+  return {
+    id: job.id,
+    name: job.name,
+    phase: job.phase,
+    price: job.price,
+    clientAddress: job.clientAddress,
+    providerAddress: job.providerAddress,
+    requirement: job.requirement ?? null,
+    memos: Array.isArray(job.memos)
+      ? job.memos.map((m: any) => ({ id: m.id, type: m.type, content: m.content, nextPhase: m.nextPhase }))
+      : [],
+    deliverables: Array.isArray(job.deliverables)
+      ? job.deliverables.map((d: any) => ({ type: d.type, value: d.value }))
+      : [],
+  };
 }
 
-interface IPosition {
-  symbol: string;
-  amount: number;
-  tp: TpSlConfig;
-  sl: TpSlConfig;
+class RespondToJobTool extends Tool {
+  name = "respond_to_job";
+  description = "Evaluate and respond to incoming job requests";
+  async _call(input: string): Promise<string> {
+    console.log("LangChain Seller: Evaluating job request", input);
+    return "Job request evaluated and decision made";
+  }
 }
 
-interface IClientWallet {
-  clientAddress: Address;
-  positions: IPosition[];
+class DeliverJobTool extends Tool {
+  name = "deliver_job";
+  description = "Generate and deliver completed job results";
+  async _call(input: string): Promise<string> {
+    console.log("LangChain Seller: Preparing job delivery", input);
+    return "Job delivery prepared";
+  }
 }
 
-const client: Record<Address, IClientWallet> = {};
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
-const question = (prompt: string): Promise<string> => {
-  return new Promise((resolve) => {
-    rl.question(prompt, (answer) => {
-      resolve(answer.trim());
-    });
-  });
-};
-
-const promptTpSlAction = async (job: AcpJob, wallet: IClientWallet) => {
-  console.log("\nClient wallet:\n", wallet);
-  const positions = wallet.positions.filter((p) => p.amount > 0);
-  if (positions.length) {
-    console.log("\nAvailable actions:");
-    console.log("1. Hit TP");
-    console.log("2. Hit SL\n");
-    const tpSlAnswer = await question("Select an action (enter the number): ");
-    const selectedIndex = parseInt(tpSlAnswer, 10);
-    let selectedAction: string | null = null;
-    if (selectedIndex === 1) {
-      selectedAction = "TP";
-    } else if (selectedIndex === 2) {
-      selectedAction = "SL";
-    }
-
-    if (selectedAction) {
-      let validTokenSymbol: boolean = false;
-      let position: IPosition | undefined;
-      while (!validTokenSymbol) {
-        const tokenSymbolAnswer = await question("Token symbol to close: ");
-        position = wallet.positions.find(
-          (p) => p.symbol.toLowerCase() === tokenSymbolAnswer.toLowerCase(),
-        );
-        validTokenSymbol = !!position && position.amount > 0;
-      }
-      if (position) {
-        console.log(
-          `${position.symbol} position hits ${selectedAction}, sending remaining funds back to buyer`,
-        );
-        const closingAmount = closePosition(wallet, position.symbol);
-        await job.createPayableNotification(
-          `${position.symbol} position has hit ${selectedAction}. Closed ${position.symbol} position with txn hash 0x0f60a30d66f1f3d21bad63e4e53e59d94ae286104fe8ea98f28425821edbca1b`,
-          new FareAmount(
-            closingAmount *
-            (selectedAction === "TP"
-              ? 1 + (position.tp?.percentage || 0) / 100
-              : 1 - (position.sl?.percentage || 0) / 100),
-            config.baseFare,
-          ),
-        );
-        console.log(`${position.symbol} position funds sent back to buyer`);
-        console.log(wallet);
-      }
-    } else {
-      console.log("Invalid selection. Please try again.");
-    }
+class GenerateMemeTool extends Tool {
+  name = "generate_meme";
+  description = "Generate a meme based on the job requirements";
+  async _call(_input: string): Promise<string> {
+    console.log("LangChain Seller: Generating meme");
+    return "https://example.com/meme.png";
   }
-};
+}
 
-const getClientWallet = (address: Address): IClientWallet => {
-  const hash = createHash("sha256").update(address).digest("hex");
-  const walletAddress = `0x${hash}` as Address;
-
-  if (!client[walletAddress]) {
-    client[walletAddress] = {
-      clientAddress: walletAddress,
-      positions: [],
-    };
+class NegotiatePriceTool extends Tool {
+  name = "negotiate_price";
+  description = "Evaluate and potentially negotiate the job price";
+  async _call(input: string): Promise<string> {
+    console.log("LangChain Seller: Evaluating price", input);
+    return "Price looks acceptable";
   }
+}
 
-  return client[walletAddress];
-};
-
-const onNewTask = async (job: AcpJob, memoToSign?: AcpMemo) => {
-  const { id: jobId, phase: jobPhase, name: jobName } = job;
-  if (!memoToSign) {
-    console.log("[onNewTask] No memo to sign", { jobId });
-    return;
-  }
-  const memoId = memoToSign.id;
-
-  console.info("[onNewTask] Received job", {
-    jobId,
-    phase: AcpJobPhases[jobPhase],
-    jobName,
-    memoId,
+async function createSellerAgent() {
+      const model = new ChatGoogleGenerativeAI({
+    model: "gemini-2.5-flash",
+    temperature: 0.7,
   });
 
-  if (jobPhase === AcpJobPhases.REQUEST) {
-    return await handleTaskRequest(job, memoToSign);
-  } else if (jobPhase === AcpJobPhases.TRANSACTION) {
-    return await handleTaskTransaction(job);
-  }
-};
+  const tools = [
+    new RespondToJobTool(),
+    new DeliverJobTool(),
+    new GenerateMemeTool(),
+    new NegotiatePriceTool(),
+  ];
 
-const handleTaskRequest = async (job: AcpJob, memoToSign?: AcpMemo) => {
-  const { id: jobId, name: jobName } = job;
-  const memoId = memoToSign?.id;
+  const prompt = ChatPromptTemplate.fromMessages([
+    [
+      "system",
+      `You are an autonomous seller agent in the ACP (Agent Commerce Protocol) system.
+Your role is to provide high-quality meme generation services.
 
-  if (!memoToSign || !jobName) {
-    console.error("[handleTaskRequest] Missing data", {
-      jobId,
-      memoId,
-      jobName,
-    });
-    return;
-  }
+You should:
+1. Carefully evaluate incoming job requests
+2. Consider the requirements, price, and buyer's needs
+3. Make informed decisions about accepting or rejecting jobs
+4. Generate appropriate memes based on requirements
+5. Deliver high-quality results in a timely manner
 
-  switch (jobName) {
-    case JobName.OPEN_POSITION: {
-      console.log("Accepts position opening request", job.requirement);
-      await memoToSign.sign(true, "Accepts position opening");
-      const openPositionPayload = job.requirement as V2DemoOpenPositionPayload;
-      return await job.createPayableRequirement(
-        "Send me USDC to open position",
-        MemoType.PAYABLE_REQUEST,
-        new FareAmount(
-          openPositionPayload.amount,
-          config.baseFare, // Open position against ACP Base Currency: USDC
-        ),
-        job.providerAddress,
-      );
-    }
+Guidelines:
+- Accept jobs that align with your capabilities and have reasonable requirements
+- Consider the offered price relative to the work required
+- Ensure you can deliver quality results on time
+- Be professional in communications
+- Maintain high standards for your meme generation service
 
-    case JobName.CLOSE_POSITION: {
-      const wallet = getClientWallet(job.clientAddress);
-      const closePositionPayload =
-        job.requirement as V2DemoClosePositionPayload;
+Always think carefully and explain your reasoning.`,
+    ],
+    ["human", "{input}"],
+    ["placeholder", "{agent_scratchpad}"],
+  ]);
 
-      const symbol = closePositionPayload.symbol;
-      const position = wallet.positions.find((p) => p.symbol === symbol);
-      const positionIsValid = !!position && position.amount > 0;
-      console.log(
-        `${positionIsValid ? "Accepts" : "Rejects"} position closing`,
-      );
-      const response = positionIsValid
-        ? `Accepts position closing. Please make payment to close ${symbol} position.`
-        : "Rejects position closing. Position is invalid.";
-      return await job.respond(positionIsValid, response);
-    }
+  const agent = await createToolCallingAgent({ llm: model, tools, prompt });
 
-    case JobName.SWAP_TOKEN: {
-      console.log("Accepts token swapping request", job.requirement);
-      await memoToSign.sign(true, "Accepts token swapping request");
-
-      const swapTokenPayload = job.requirement as V2DemoSwapTokenPayload;
-
-      return await job.createPayableRequirement(
-        `Send me ${swapTokenPayload.fromSymbol} to swap to ${swapTokenPayload.toSymbol}`,
-        MemoType.PAYABLE_REQUEST,
-        new FareAmount(
-          swapTokenPayload.amount,
-          await Fare.fromContractAddress(
-            // Constructing Fare for the token to swap from
-            swapTokenPayload.fromContractAddress,
-            config,
-          ),
-        ),
-        job.providerAddress,
-      );
-    }
-
-    default:
-      console.warn("[handleTaskRequest] Unsupported job name", {
-        jobId,
-        jobName,
-      });
-  }
-};
-
-const handleTaskTransaction = async (job: AcpJob) => {
-  const { id: jobId, name: jobName } = job;
-  const wallet = getClientWallet(job.clientAddress);
-
-  if (!jobName) {
-    console.error("[handleTaskTransaction] Missing job name", { jobId });
-    return;
-  }
-
-  switch (jobName) {
-    case JobName.OPEN_POSITION: {
-      const openPositionPayload = job.requirement as V2DemoOpenPositionPayload;
-      openPosition(wallet, openPositionPayload);
-      console.log("Opening position", openPositionPayload);
-      await job.deliver(
-        "Opened position with txn 0x71c038a47fd90069f133e991c4f19093e37bef26ca5c78398b9c99687395a97a",
-      );
-      console.log("Position opened");
-      return await promptTpSlAction(job, wallet);
-    }
-
-    case JobName.CLOSE_POSITION: {
-      const closePositionPayload =
-        job.requirement as V2DemoClosePositionPayload;
-      const closingAmount = closePosition(wallet, closePositionPayload.symbol);
-      console.log(`Returning closing amount: ${closingAmount} USDC`);
-      await job.deliverPayable(
-        `Closed ${closePositionPayload.symbol} position with txn hash 0x0f60a30d66f1f3d21bad63e4e53e59d94ae286104fe8ea98f28425821edbca1b`,
-        new FareAmount(closingAmount, config.baseFare),
-      );
-      console.log("Closing amount returned");
-      console.log(wallet);
-      break;
-    }
-
-    case JobName.SWAP_TOKEN: {
-      const swapTokenPayload = job.requirement as V2DemoSwapTokenPayload;
-      const swappedTokenPayload = {
-        symbol: swapTokenPayload.toSymbol,
-        amount: new FareAmount(
-          0.00088,
-          await Fare.fromContractAddress(
-            // Constructing Fare for the token to swap to
-            swapTokenPayload.toContractAddress,
-            config,
-          ),
-        ),
-      };
-      console.log("Returning swapped token", swappedTokenPayload);
-      await job.deliverPayable(
-        `Return swapped token ${swappedTokenPayload.symbol}`,
-        swappedTokenPayload.amount,
-      );
-      console.log("Swapped token returned");
-      break;
-    }
-
-    default:
-      console.warn("[handleTaskTransaction] Unsupported job name", {
-        jobId,
-        jobName,
-      });
-  }
-};
-
-function openPosition(
-  wallet: IClientWallet,
-  payload: V2DemoOpenPositionPayload,
-) {
-  const { symbol, amount, tp, sl } = payload;
-  const pos = wallet.positions.find((p) => p.symbol === symbol);
-  if (pos) pos.amount += payload.amount;
-  else wallet.positions.push({ symbol, amount, tp, sl });
-}
-
-function closePosition(wallet: IClientWallet, symbol: string): number {
-  const pos = wallet.positions.find((p) => p.symbol === symbol);
-  // remove the position from wallet
-  wallet.positions = wallet.positions.filter((p) => p.symbol !== symbol);
-  return pos?.amount || 0;
+  return new AgentExecutor({ agent, tools, verbose: true });
 }
 
 async function main() {
+  const sellerAgent = await createSellerAgent();
+
+  const pk = process.env.WHITELISTED_WALLET_PRIVATE_KEY as `0x${string}`;
+  const entityId = parseInt(process.env.SELLER_ENTITY_ID || "0", 10);
+  const sellerAddress = process.env.SELLER_AGENT_WALLET_ADDRESS as `0x${string}`;
+
+  if (!pk || !entityId || !sellerAddress) {
+    console.error("Missing env: WHITELISTED_WALLET_PRIVATE_KEY, SELLER_ENTITY_ID, SELLER_AGENT_WALLET_ADDRESS");
+    process.exit(1);
+  }
+
   new AcpClient({
-    acpContractClient: await AcpContractClientV2.build(
-      WHITELISTED_WALLET_PRIVATE_KEY,
-      SELLER_ENTITY_ID,
-      SELLER_AGENT_WALLET_ADDRESS,
-    ),
-    onNewTask,
+    acpContractClient: await AcpContractClientV2.build(pk, entityId, sellerAddress),
+    onNewTask: async (job: AcpJob) => {
+      console.log("[ACP] New task:", { id: job.id, phase: AcpJobPhases[job.phase], name: job.name });
+      try {
+        const result = await sellerAgent.invoke({
+          input: `New job update: ${JSON.stringify(cleanJobData(job))}.\nCurrent phase: ${job.phase}. What action should we take?`,
+        });
+        console.log("[LangChain] Decision:", result?.output ?? result);
+
+        if (job.phase === AcpJobPhases.REQUEST) {
+          await job.respond(true, "Accepting request");
+          console.log(`[ACP] Job ${job.id} responded (accepted)`);
+        } else if (job.phase === AcpJobPhases.TRANSACTION) {
+          // Deliver a URL as the result (replace with actual generated artifact)
+          await job.deliver("https://example.com/meme.png");
+          console.log(`[ACP] Job ${job.id} delivered`);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    },
   });
+
+  console.log("Seller ACP agent is listening for jobs...");
 }
 
 main();
+
