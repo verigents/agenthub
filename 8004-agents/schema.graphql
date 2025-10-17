@@ -1,0 +1,33 @@
+type Agent @entity(immutable: false) {
+  id: ID!
+  identityRegistry: Bytes!
+  agentId: BigInt!
+  owner: Bytes!
+  tokenURI: String!
+  createdAt: BigInt!
+  updatedAt: BigInt!
+}
+
+type MetadataEvent @entity(immutable: true) {
+  id: ID!
+  identityRegistry: Bytes!
+  agentId: BigInt!
+  key: String!
+  value: Bytes!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type UriUpdatedEvent @entity(immutable: true) {
+  id: ID!
+  identityRegistry: Bytes!
+  agentId: BigInt!
+  newUri: String!
+  updatedBy: Bytes!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+
