@@ -191,7 +191,10 @@ async function main() {
 	}
 
 	const acpNetwork = String(process.env.ACP_NETWORK || "base").toLowerCase();
-	const acpConfig = acpNetwork === "base-sepolia" || acpNetwork === "sepolia" ? baseSepoliaAcpConfigV2 : baseAcpConfigV2;
+	const acpConfig =
+		acpNetwork === "base-sepolia" || acpNetwork === "sepolia"
+			? baseSepoliaAcpConfigV2
+			: baseAcpConfigV2;
 	console.log(
 		`Using ACP network: ${acpNetwork} (contract: ${acpConfig.contractAddress})`,
 	);
