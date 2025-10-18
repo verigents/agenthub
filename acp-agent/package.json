@@ -12,7 +12,7 @@
   "dependencies": {
     "@langchain/core": "^0.3.78",
     "@langchain/google-genai": "^0.2.18",
-    "@virtuals-protocol/acp-node": "^0.3.0-beta.1",
+    "@virtuals-protocol/acp-node": "^0.3.0-beta.2",
     "dotenv": "^17.2.3",
     "langchain": "^0.3.36"
   }

@@ -6,7 +6,7 @@
       "dependencies": {
         "@langchain/core": "^0.3.78",
         "@langchain/google-genai": "^0.2.18",
-        "@virtuals-protocol/acp-node": "^0.3.0-beta.1",
+        "@virtuals-protocol/acp-node": "^0.3.0-beta.2",
         "dotenv": "^17.2.3",
         "langchain": "^0.3.36",
       },
@@ -269,7 +269,7 @@
 
     "@types/ws": ["@types/ws@7.4.7", "", { "dependencies": { "@types/node": "*" } }, "sha512-JQbbmxZTZehdc2iszGKs5oC3NFnjeay7mtAWrdt7qNtAVK0g19muApzAy4bm9byz79xa2ZnO/BOBC2R8RC5Lww=="],
 
-    "@virtuals-protocol/acp-node": ["@virtuals-protocol/acp-node@0.3.0-beta.1", "", { "dependencies": { "@aa-sdk/core": "^4.30.0", "@account-kit/infra": "^4.30.0", "@account-kit/smart-contracts": "^4.30.0", "ajv": "^8.17.1", "socket.io-client": "^4.8.1", "tsup": "^8.5.0", "viem": "^2.28.2" } }, "sha512-FvlpHTryV07cDuHdfhJTcTfOL6y7ux1oF0XjWZ/xgnXCGvzuSQ8CQbv6a+8W76q5m9ixe3kbAc1WpA/VsHVBuw=="],
+    "@virtuals-protocol/acp-node": ["@virtuals-protocol/acp-node@0.3.0-beta.2", "", { "dependencies": { "@aa-sdk/core": "^4.30.0", "@account-kit/infra": "^4.30.0", "@account-kit/smart-contracts": "^4.30.0", "ajv": "^8.17.1", "socket.io-client": "^4.8.1", "tsup": "^8.5.0", "viem": "^2.28.2" } }, "sha512-ZSVAR4fgEjHbxhkfQdjqr9MtRTxngiZpGAzapKl9NsZ63cqbM4Cus47bpY510oKXSazFiCLsjpzn01zXcWlXQg=="],
 
     "abitype": ["abitype@0.8.11", "", { "peerDependencies": { "typescript": ">=5.0.4", "zod": "^3 >=3.19.1" }, "optionalPeers": ["zod"] }, "sha512-bM4v2dKvX08sZ9IU38IN5BKmN+ZkOSd2oI4a9f0ejHYZQYV6cDr7j+d95ga0z2XHG36Y4jzoG5Z7qDqxp7fi/A=="],
 

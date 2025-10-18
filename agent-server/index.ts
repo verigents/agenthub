@@ -18,6 +18,7 @@ app.post("/chat", async (c) => {
 	if (!question) {
 		return c.text("Question is required");
 	}
+
 	try {
 		const res = await model.invoke(question);
 		return c.json({ answer: res?.content ?? "" });
