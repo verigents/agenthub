@@ -1,4 +1,9 @@
 import React from "react";
+import { useAccount, useWriteContract } from "wagmi";
+import { parseAbi } from "viem";
+import { Button } from "@/components/ui/button";
+import { IDENTITY_REGISTRY_ADDRESS } from "@/lib/utils";
+import Link from "next/link";
 
 export type Agent = {
   id: string;
@@ -6,28 +11,101 @@ export type Agent = {
   role?: string;
   score?: number;
   capabilities?: string[];
+  image?: string;
+  owner?: string;
+  tokenURI?: string;
+  meta?: any;
 };
 
-export default function AgentCard({ agent }: { agent: Agent }) {
+const identityAbi = parseAbi([
+  "function transferFrom(address from, address to, uint256 tokenId)",
+  "function setAgentUri(uint256 agentId, string newUri)",
+  "function ownerOf(uint256 tokenId) view returns (address)",
+  "function tokenURI(uint256 tokenId) view returns (string)",
+]);
+
+function toHttpFromTokenUri(uri?: string): string | undefined {
+  if (!uri) return uri;
+  if (uri.startsWith("ipfs://")) return `https://ipfs.io/ipfs/${uri.replace("ipfs://", "")}`;
+  if (uri.startsWith("ar://")) return `https://arweave.net/${uri.replace("ar://", "")}`;
+  return uri;
+}
+
+export default function AgentCard({ agent, highlight }: { agent: Agent; highlight?: boolean }) {
+  const { address } = useAccount();
+  const { writeContract, isPending } = useWriteContract();
+
+  function onTransfer() {
+    const to = prompt("Send to address");
+    if (!to || !address) return;
+    writeContract({
+      abi: identityAbi,
+      address: IDENTITY_REGISTRY_ADDRESS as `0x${string}`,
+      functionName: "transferFrom",
+      args: [address, to as `0x${string}`, BigInt(agent.id)],
+    });
+  }
+
+  function onUpdateUri() {
+    const newUri = prompt("New token URI (https://...)");
+    if (!newUri) return;
+    writeContract({
+      abi: identityAbi,
+      address: IDENTITY_REGISTRY_ADDRESS as `0x${string}`,
+      functionName: "setAgentUri",
+      args: [BigInt(agent.id), newUri],
+    });
+  }
+  const imgSrc = toHttpFromTokenUri(agent.image || agent.meta?.image);
+  const supportedTrust: string[] = Array.isArray(agent.meta?.supportedTrust) ? agent.meta.supportedTrust : (agent.capabilities ?? []);
+  const endpoints: { name?: string; endpoint?: string; version?: string }[] = Array.isArray(agent.meta?.endpoints) ? agent.meta.endpoints : [];
+
   return (
-    <div className="relative bg-[#0f1020] text-white ring-2 ring-[#4f46e5] p-4 shadow-[0_0_0_2px_#000]">
-      <div className="absolute inset-0 pointer-events-none" style={{ boxShadow: "inset 0 0 80px rgba(79, 70, 229, 0.15)" }} />
-      <div className="flex items-center justify-between">
-        <div className="text-xs uppercase tracking-widest text-[#a78bfa]">Agent Card</div>
-        <div className="text-xs text-[#00F5D4]">Score {agent.score?.toFixed(2) ?? "—"}</div>
-      </div>
-      <div className="mt-3 text-2xl font-black text-white">{agent.name}</div>
-      <div className="mt-1 text-xs text-[#c4b5fd]">{agent.role ?? "Autonomous Service"}</div>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        {(agent.capabilities ?? ["route", "settle", "verify", "notify"]).slice(0,4).map((cap) => (
-          <div key={cap} className="bg-[#11132a] text-[#a78bfa] ring-1 ring-[#4f46e5] px-2 py-1 text-xs">
-            {cap}
+    <div className={`relative bg-[#0f1020] text-white ring-2 ${highlight ? "ring-[#00F5D4]" : "ring-[#4f46e5]"} p-0 shadow-[0_0_0_2px_#000]`}>
+      {imgSrc ? (
+        <img src={imgSrc} alt="agent" className="w-full h-40 object-cover object-center" />
+      ) : null}
+      <div className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] uppercase tracking-widest text-[#a78bfa]">Agent</div>
+          <div className="text-[10px] text-[#00F5D4]">#{agent.id}</div>
+        </div>
+        <div className="text-xl font-extrabold text-white leading-tight">{agent.name}</div>
+        {agent.role ? (
+          <div className="text-sm text-white/80 leading-relaxed">{agent.role}</div>
+        ) : null}
+        {supportedTrust?.length ? (
+          <div className="flex flex-wrap gap-2">
+            {supportedTrust.slice(0, 6).map((t) => (
+              <span key={t} className="px-2 py-0.5 text-[11px] rounded bg-[#141532] ring-1 ring-white/15 text-white/80">{t}</span>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="mt-4 flex gap-2">
-        <button className="bg-[#00BBF9] text-black ring-2 ring-black px-3 py-2 text-sm font-bold">Connect</button>
-        <button className="bg-[#FEE440] text-black ring-2 ring-black px-3 py-2 text-sm font-bold">Inspect</button>
+        ) : null}
+        {endpoints?.length ? (
+          <div className="space-y-1">
+            <div className="text-[10px] uppercase tracking-widest text-[#a78bfa]">Endpoints</div>
+            <div className="grid gap-1">
+              {endpoints.slice(0, 3).map((ep, i) => (
+                <a key={i} href={ep.endpoint} target="_blank" rel="noreferrer" className="text-xs text-[#00BBF9] hover:underline break-all">
+                  {ep.name || "Endpoint"}: {ep.endpoint}
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        <div className="text-[11px] text-white/60 break-all space-y-1">
+          {agent.owner ? (<div>Owner: {agent.owner}</div>) : null}
+          {agent.tokenURI ? (
+            <div>
+              JSON: <a className="underline text-[#00BBF9]" href={toHttpFromTokenUri(agent.tokenURI)} target="_blank" rel="noreferrer">{agent.tokenURI}</a>
+            </div>
+          ) : null}
+        </div>
+        <div className="flex gap-2 pt-1">
+          <Link className="bg-[#00BBF9] text-black ring-2 ring-black px-3 py-2 text-sm font-bold" href="https://app.virtuals.io/acp" target="_blank">
+            Interact
+          </Link>
+        </div>
       </div>
     </div>
   );

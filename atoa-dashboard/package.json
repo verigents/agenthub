@@ -11,7 +11,10 @@
   "dependencies": {
     "@ai-sdk/google": "^2.0.14",
     "@radix-ui/react-slot": "^1.2.3",
+    "@rainbow-me/rainbowkit": "^2.2.1",
     "@tanstack/react-query": "^5.89.0",
+    "@wagmi/chains": "^1.8.0",
+    "@wagmi/core": "^2.22.1",
     "@web3auth/base": "^9.7.0",
     "@web3auth/ethereum-provider": "^9.7.0",
     "@web3auth/modal": "^10.3.1",
@@ -26,7 +29,8 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "tailwind-merge": "^3.3.1",
-    "wagmi": "^2.17.0"
+    "viem": "^2.38.3",
+    "wagmi": "^2.18.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -1,22 +1,23 @@
 "use client";
 
 import React from "react";
-import { Web3AuthProvider } from "@web3auth/modal/react";
-import { WagmiProvider } from "@web3auth/modal/react/wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import web3AuthContextConfig from "./web3AuthContext";
+import { WagmiProvider } from "wagmi";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import "@rainbow-me/rainbowkit/styles.css";
+import { wagmiConfig } from "@/lib/wagmi";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(() => new QueryClient());
 
   return (
-    <Web3AuthProvider config={web3AuthContextConfig}>
-      <QueryClientProvider client={queryClient}>
-        <WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <WagmiProvider config={wagmiConfig}>
+        <RainbowKitProvider>
           {children}
-        </WagmiProvider>
-      </QueryClientProvider>
-    </Web3AuthProvider>
+        </RainbowKitProvider>
+      </WagmiProvider>
+    </QueryClientProvider>
   );
 }
 

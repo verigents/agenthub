@@ -1,24 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import AssistantChat from "@/components/AssistantChat";
 import AgentCard, { type Agent } from "@/components/AgentCard";
+import AgentDetails from "@/components/AgentDetails";
 import { type AgentGraph } from "@/components/FlowMap";
 
 export default function Sidebar({
 	selectedAgent,
 	onCollapse,
-	defaultTab = "details",
 	graph,
 	onGraphUpdate,
 }: {
 	selectedAgent: Agent | null;
 	onCollapse: () => void;
-	defaultTab?: "details" | "chat";
 	graph?: AgentGraph | null;
 	onGraphUpdate?: (g: AgentGraph) => void;
 }) {
-	const [tab, setTab] = useState<"details" | "chat">(defaultTab);
+    const [tab] = useState<"details">("details");
 
 	return (
 		<div className="h-full min-h-0 grid grid-rows-[auto_auto_minmax(0,1fr)] bg-[#0b0c1a] text-white border-l border-white/10 overflow-hidden">
@@ -31,32 +29,15 @@ export default function Sidebar({
 					Collapse
 				</button>
 			</div>
-			<div className="grid grid-cols-2">
-				<button
-					className={`px-3 py-2 text-sm ${tab === "details" ? "bg-[#141532]" : "bg-[#0f1020]"}`}
-					onClick={() => setTab("details")}
-				>
-					Details
-				</button>
-				<button
-					className={`px-3 py-2 text-sm ${tab === "chat" ? "bg-[#141532]" : "bg-[#0f1020]"}`}
-					onClick={() => setTab("chat")}
-				>
-					Chat
-				</button>
-			</div>
+            <div className="px-3 py-2 text-sm bg-[#141532]">Details</div>
 			<div className="h-full overflow-hidden min-h-0">
-				{tab === "details" ? (
-					<div className="p-3 h-full overflow-y-auto">
-						{selectedAgent ? (
-							<AgentCard agent={selectedAgent} />
-						) : (
-							<div className="text-sm text-white/70">Select an agent on the map to see details.</div>
-						)}
-					</div>
-				) : (
-					<AssistantChat graph={graph ?? undefined} onGraph={(g) => onGraphUpdate?.(g)} />
-				)}
+                <div className="p-3 h-full overflow-y-auto">
+                    {selectedAgent ? (
+                        <AgentDetails agent={selectedAgent} />
+                    ) : (
+                        <div className="text-sm text-white/70">Select an agent on the map to see details.</div>
+                    )}
+                </div>
 			</div>
 		</div>
 	);

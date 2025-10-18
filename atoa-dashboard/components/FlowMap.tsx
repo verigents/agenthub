@@ -125,22 +125,45 @@ export default function FlowMap({ graph, onSelect }: { graph?: AgentGraph | null
   useEffect(() => {
     if (!graph || !graph.agents?.length) return;
     const palette = ["#00BBF9", "#FEE440", "#9B5DE5", "#F15BB5", "#00F5D4"];
-    const N = graph.agents.length;
-    const radius = 220;
-    const centerX = 420;
-    const centerY = 260;
+    const width = 920;
+    const height = 540;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const cols = 4;
+    const rows = Math.ceil(graph.agents.length / cols);
+    const cellW = width / cols;
+    const cellH = height / Math.max(rows, 1);
+    const jitter = 50;
+
     const gNodes: Node[] = graph.agents.map((a, i) => {
-      const angle = (i / N) * Math.PI * 2;
-      const x = centerX + Math.cos(angle) * radius;
-      const y = centerY + Math.sin(angle) * radius;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const baseX = 60 + col * cellW + cellW / 2;
+      const baseY = 60 + row * cellH + cellH / 2;
+      const randX = baseX + ((i * 97) % jitter) - jitter / 2;
+      const randY = baseY + ((i * 53) % jitter) - jitter / 2;
       return {
         id: a.id,
         type: "bubble",
-        position: { x, y },
+        position: { x: randX, y: randY },
         data: { label: a.name, color: palette[i % palette.length], purpose: a.purpose },
       } as Node;
     });
-    const gEdges: Edge[] = graph.edges.map((e, i) => ({ id: `e-${i}`, source: e.source, target: e.target, label: e.label }));
+
+    // Ghost ACP node at center
+    gNodes.push({
+      id: "acp",
+      type: "bubble",
+      position: { x: centerX, y: centerY },
+      data: { label: "ACP Butler", color: "#00F5D4", purpose: "Chat & Orchestration" },
+    } as Node);
+
+    // Edges: reverse flow: ACP -> Agents
+    const gEdges: Edge[] = [
+      ...graph.edges.map((e, i) => ({ id: `e-${i}`, source: e.source, target: e.target, label: e.label })),
+      ...graph.agents.map((a, i) => ({ id: `acp-${i}`, source: "acp", target: a.id })),
+    ];
+
     setNodes(gNodes);
     setEdges(gEdges);
   }, [graph, setNodes, setEdges]);
