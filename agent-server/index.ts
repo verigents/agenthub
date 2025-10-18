@@ -108,4 +108,14 @@ app.get("/.well-known/agent-card.json", (c) => {
     return c.json(body);
 });
 
-export default app;
+export default {
+    port : process.env.PORT ? Number(process.env.PORT) : 3001,
+    fetch: app.fetch,
+    handler: app.fetch,
+    get: app.get,
+    post: app.post,
+    put: app.put,
+    delete: app.delete,
+    options: app.options,
+    patch: app.patch,
+};
