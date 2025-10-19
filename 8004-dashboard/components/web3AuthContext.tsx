@@ -1,1 +1,2 @@
-export default {} as any;
+export type Web3AuthContext = Record<string, never>;
+export default {} as Web3AuthContext;

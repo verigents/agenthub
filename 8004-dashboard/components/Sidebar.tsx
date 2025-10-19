@@ -1,22 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
-import AgentCard, { type Agent } from "@/components/AgentCard";
+import React from "react";
+import { type Agent } from "@/components/AgentCard";
 import AgentDetails from "@/components/AgentDetails";
-import { type AgentGraph } from "@/components/FlowMap";
 
 export default function Sidebar({
 	selectedAgent,
 	onCollapse,
-	graph,
-	onGraphUpdate,
 }: {
 	selectedAgent: Agent | null;
 	onCollapse: () => void;
-	graph?: AgentGraph | null;
-	onGraphUpdate?: (g: AgentGraph) => void;
 }) {
-    const [tab] = useState<"details">("details");
 
 	return (
 		<div className="h-full min-h-0 grid grid-rows-[auto_auto_minmax(0,1fr)] bg-[#0b0c1a] text-white border-l border-white/10 overflow-hidden">

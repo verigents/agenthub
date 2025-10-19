@@ -6,7 +6,7 @@ export type SubgraphAgent = {
   agentId: string;
   owner: string;
   tokenURI: string;
-  meta?: any;
+  meta?: Record<string, unknown>;
   agentBase?: string;
 };
 

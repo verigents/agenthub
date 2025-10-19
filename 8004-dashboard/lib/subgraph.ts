@@ -2,13 +2,22 @@ export const SUBGRAPH_URL =
   (process.env.NEXT_PUBLIC_SUBGRAPH_URL ||
     "https://api.studio.thegraph.com/query/119832/8004-agents/version/latest").replace(/\/$/, "");
 
+export interface AgentMeta {
+  name?: string;
+  description?: string;
+  image?: string;
+  endpoints?: Array<{ endpoint?: string }>;
+  endpoint?: string;
+  [key: string]: unknown;
+}
+
 export type SubgraphAgent = {
   id: string;
   identityRegistry: string;
   agentId: string;
   owner: string;
   tokenURI: string;
-  meta?: any;
+  meta?: AgentMeta | null;
   agentBase?: string;
 };
 
@@ -25,19 +34,19 @@ function toHttpFromTokenUri(uri: string): string {
   return uri;
 }
 
-async function fetchJsonWithTimeout(url: string, ms = 8000): Promise<any> {
+async function fetchJsonWithTimeout<T = unknown>(url: string, ms = 8000): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
     const resp = await fetch(url, { signal: controller.signal });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    return await resp.json();
+    return (await resp.json()) as T;
   } finally {
     clearTimeout(timer);
   }
 }
 
-function deriveAgentBaseFromMeta(meta: any): string {
+function deriveAgentBaseFromMeta(meta: AgentMeta | null | undefined): string {
   try {
     const endpoints = Array.isArray(meta?.endpoints) ? meta.endpoints : [];
     const first = endpoints[0];
@@ -53,6 +62,12 @@ function deriveAgentBaseFromMeta(meta: any): string {
   return "";
 }
 
+type GraphQLAgentsResponse = {
+  data?: {
+    agents?: Array<Omit<SubgraphAgent, "meta" | "agentBase">>;
+  };
+};
+
 export async function fetchAgentsFromSubgraph(first = 24): Promise<SubgraphAgent[]> {
   const query = `query Agents($first: Int!) { agents(first: $first, orderBy: createdAt, orderDirection: desc) { id identityRegistry agentId owner tokenURI } }`;
   const res = await fetch(SUBGRAPH_URL, {
@@ -61,18 +76,18 @@ export async function fetchAgentsFromSubgraph(first = 24): Promise<SubgraphAgent
     body: JSON.stringify({ query, variables: { first } }),
     next: { revalidate: 30 },
   });
-  const json = await res.json().catch(() => ({} as any));
-  const agents: SubgraphAgent[] = json?.data?.agents ?? [];
+  const json = (await res.json().catch(() => ({}))) as GraphQLAgentsResponse;
+  const coreAgents = json?.data?.agents ?? [];
 
   // Enrich with metadata client-side
   const enriched = await Promise.all(
-    agents.map(async (a) => {
-      let meta: any = null;
+    coreAgents.map(async (a) => {
+      let meta: AgentMeta | null = null;
       let agentBase = "";
       try {
         const url = toHttpFromTokenUri(a.tokenURI);
         if (url) {
-          meta = await fetchJsonWithTimeout(url).catch(() => null);
+          meta = await fetchJsonWithTimeout<AgentMeta>(url).catch(() => null);
           agentBase = deriveAgentBaseFromMeta(meta);
         }
       } catch {}
