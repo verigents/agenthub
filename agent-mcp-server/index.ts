@@ -117,11 +117,11 @@ app.get("/", (c) => {
 		],
 		registrations: identityRegistry
 			? [
-					{
-						agentId,
-						agentRegistry: `eip155:${chainId}:${identityRegistry}`,
-					},
-				]
+				{
+					agentId,
+					agentRegistry: `eip155:${chainId}:${identityRegistry}`,
+				},
+			]
 			: [],
 		supportedTrust: ["reputation"],
 	};
@@ -191,11 +191,11 @@ app.get("/.well-known/agent-card.json", (c) => {
 		],
 		registrations: identityRegistry
 			? [
-					{
-						agentId,
-						agentRegistry: `eip155:${chainId}:${identityRegistry}`,
-					},
-				]
+				{
+					agentId,
+					agentRegistry: `eip155:${chainId}:${identityRegistry}`,
+				},
+			]
 			: [],
 		supportedTrust: ["reputation"],
 	};
@@ -222,4 +222,7 @@ process.on("SIGTERM", async () => {
 	process.exit(0);
 });
 
-export default app;
+export default {
+	port: process.env.PORT || 3004,
+	fetch: app.fetch,
+};
