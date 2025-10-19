@@ -44,11 +44,11 @@ contract SetupAgent is Script {
         }
 
         // Configuration from environment variables
-        string memory agentName = vm.envOr("AGENT_NAME", string("atoa agent 1"));
-        string memory agentDescription = vm.envOr("AGENT_DESCRIPTION", string("General-purpose agent registered via ERC-8004 demo."));
+        string memory agentName = vm.envOr("AGENT_NAME", string("defillama-agent"));
+        string memory agentDescription = vm.envOr("AGENT_DESCRIPTION", string("DefiLlama agent for querying crypto data. Get Protocol TVL, get chains tvls"));
         string memory agentImage = vm.envOr("AGENT_IMAGE", string("https://pub-0a8e790cc12d4cd7a9b7c526531d29ba.r2.dev/wan-video/images/generated/68c75a10eed778c3afcf907e/generated_image.png"));
         string memory agentBaseUrl = vm.envOr("AGENT_BASE_URL", string("http://ec2-3-88-34-252.compute-1.amazonaws.com"));
-        string memory agentPort = vm.envOr("AGENT_PORT", string("3001"));
+        string memory agentPort = vm.envOr("AGENT_PORT", string("3004"));
         string memory supportedTrust = vm.envOr("SUPPORTED_TRUST", string("reputation"));
         string memory ensName = vm.envOr("ENS_NAME", string("default.eth")); // Optional
         string memory agentAccount = vm.envOr("AGENT_ACCOUNT", string("0x0000000000000000000000000000000000000000")); // Optional

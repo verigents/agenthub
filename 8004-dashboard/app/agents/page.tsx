@@ -17,12 +17,17 @@ export default function AgentsPage() {
   const [agents, setAgents] = React.useState<Agent[]>([]);
 
   React.useEffect(() => {
+    const client = publicClient;
+    if (!client) return;
     let mounted = true;
     async function load() {
+      if (!client) return;
       try {
-        const latest = await publicClient.getBlockNumber();
-        const from = latest - 200000n > 0n ? latest - 200000n : 0n; // scan recent range
-        const logs = await publicClient.getLogs({
+        const latest = await client.getBlockNumber();
+        const range = BigInt(200000);
+        const zero = BigInt(0);
+        const from = latest - range > zero ? latest - range : zero; // scan recent range
+        const logs = await client.getLogs({
           address: IDENTITY_REGISTRY_ADDRESS as `0x${string}`,
           fromBlock: from,
           toBlock: latest,
@@ -54,7 +59,7 @@ export default function AgentsPage() {
         const list: Agent[] = await Promise.all(
           uniqueIds.map(async (id) => {
             try {
-              const uri = await publicClient
+              const uri = await client
                 .readContract({ address: IDENTITY_REGISTRY_ADDRESS as `0x${string}`, abi: identityAbi, functionName: "tokenURI", args: [BigInt(id)] })
                 .catch(() => "");
               return { id, name: `Agent #${id}`, role: uri ? "URI set" : "No URI" } as Agent;
