@@ -2,7 +2,6 @@
 import React from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { fetchAgentsFromSubgraph } from "@/lib/subgraph";
-import AgentCard from "@/components/AgentCard";
 import FlowMap, { type AgentGraph } from "@/components/FlowMap";
 import Sidebar from "@/components/Sidebar";
 

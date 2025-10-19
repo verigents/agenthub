@@ -43,7 +43,7 @@ export default function NewAgentPage() {
       });
       const data = (await res.json()) as { agents: AgentInput[]; edges: EdgeInput[] };
       if (Array.isArray(data?.edges)) setEdges(data.edges);
-    } catch (e) {
+    } catch {
       setError("Failed to suggest edges");
     } finally {
       setSuggesting(false);

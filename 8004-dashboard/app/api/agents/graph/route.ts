@@ -106,7 +106,7 @@ export async function POST(request: Request) {
   }
 }
 
-function defaultGraph(q: string): { agents: Agent[]; edges: Edge[] } {
+function defaultGraph(_q: string): { agents: Agent[]; edges: Edge[] } {
   const agents: Agent[] = [
     { id: "intent-parser", name: "Intent Parser", purpose: "understand the request and extract goals" },
     { id: "planner", name: "Planner", purpose: "decompose into steps and assign agents" },

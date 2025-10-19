@@ -1,5 +1,5 @@
 import React from "react";
-import { useAccount } from "wagmi";
+// import { useAccount } from "wagmi";
 import Link from "next/link";
 import type { AgentMeta } from "@/lib/subgraph";
 
@@ -23,7 +23,7 @@ function toHttpFromTokenUri(uri?: string): string | undefined {
 }
 
 export default function AgentCard({ agent, highlight }: { agent: Agent; highlight?: boolean }) {
-  const { address } = useAccount();
+  // const { address } = useAccount();
   const imgSrc = toHttpFromTokenUri(agent.image || agent.meta?.image);
   const supportedTrust: string[] = Array.isArray(agent.meta?.supportedTrust) ? agent.meta!.supportedTrust! : (agent.capabilities ?? []);
   const endpoints: { name?: string; endpoint?: string; version?: string }[] = Array.isArray(agent.meta?.endpoints) ? agent.meta.endpoints : [];

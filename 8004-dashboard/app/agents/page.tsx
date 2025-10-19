@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { usePublicClient, useReadContract } from "wagmi";
+import { usePublicClient } from "wagmi";
 import { parseAbi } from "viem";
 import AgentCard, { type Agent } from "@/components/AgentCard";
 import { IDENTITY_REGISTRY_ADDRESS } from "@/lib/utils";
@@ -36,14 +36,27 @@ export default function AgentsPage() {
             name: "Registered",
           }],
         });
-        const uniqueIds = Array.from(new Set(logs.map((l: any) => BigInt(l.args?.agentId as any).toString())));
+        const uniqueIds = Array.from(
+          new Set(
+            logs
+              .map((l) => {
+                const agentId = (l as { args?: Record<string, unknown> }).args?.agentId;
+                if (typeof agentId === "bigint") return agentId.toString();
+                if (typeof agentId === "string") {
+                  try { return BigInt(agentId).toString(); } catch { return null; }
+                }
+                if (typeof agentId === "number") return BigInt(agentId).toString();
+                return null;
+              })
+              .filter((v): v is string => Boolean(v))
+          )
+        );
         const list: Agent[] = await Promise.all(
           uniqueIds.map(async (id) => {
             try {
-              const [owner, uri] = await Promise.all([
-                publicClient.readContract({ address: IDENTITY_REGISTRY_ADDRESS as `0x${string}`, abi: identityAbi, functionName: "ownerOf", args: [BigInt(id)] }),
-                publicClient.readContract({ address: IDENTITY_REGISTRY_ADDRESS as `0x${string}`, abi: identityAbi, functionName: "tokenURI", args: [BigInt(id)] }).catch(() => ""),
-              ]);
+              const uri = await publicClient
+                .readContract({ address: IDENTITY_REGISTRY_ADDRESS as `0x${string}`, abi: identityAbi, functionName: "tokenURI", args: [BigInt(id)] })
+                .catch(() => "");
               return { id, name: `Agent #${id}`, role: uri ? "URI set" : "No URI" } as Agent;
             } catch {
               return { id, name: `Agent #${id}` } as Agent;
