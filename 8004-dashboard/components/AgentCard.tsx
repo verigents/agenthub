@@ -1,9 +1,7 @@
 import React from "react";
-import { useAccount, useWriteContract } from "wagmi";
-import { parseAbi } from "viem";
-import { Button } from "@/components/ui/button";
-import { IDENTITY_REGISTRY_ADDRESS } from "@/lib/utils";
+import { useAccount } from "wagmi";
 import Link from "next/link";
+import type { AgentMeta } from "@/lib/subgraph";
 
 export type Agent = {
   id: string;
@@ -14,15 +12,8 @@ export type Agent = {
   image?: string;
   owner?: string;
   tokenURI?: string;
-  meta?: any;
+  meta?: AgentMeta | null;
 };
-
-const identityAbi = parseAbi([
-  "function transferFrom(address from, address to, uint256 tokenId)",
-  "function setAgentUri(uint256 agentId, string newUri)",
-  "function ownerOf(uint256 tokenId) view returns (address)",
-  "function tokenURI(uint256 tokenId) view returns (string)",
-]);
 
 function toHttpFromTokenUri(uri?: string): string | undefined {
   if (!uri) return uri;
@@ -33,31 +24,8 @@ function toHttpFromTokenUri(uri?: string): string | undefined {
 
 export default function AgentCard({ agent, highlight }: { agent: Agent; highlight?: boolean }) {
   const { address } = useAccount();
-  const { writeContract, isPending } = useWriteContract();
-
-  function onTransfer() {
-    const to = prompt("Send to address");
-    if (!to || !address) return;
-    writeContract({
-      abi: identityAbi,
-      address: IDENTITY_REGISTRY_ADDRESS as `0x${string}`,
-      functionName: "transferFrom",
-      args: [address, to as `0x${string}`, BigInt(agent.id)],
-    });
-  }
-
-  function onUpdateUri() {
-    const newUri = prompt("New token URI (https://...)");
-    if (!newUri) return;
-    writeContract({
-      abi: identityAbi,
-      address: IDENTITY_REGISTRY_ADDRESS as `0x${string}`,
-      functionName: "setAgentUri",
-      args: [BigInt(agent.id), newUri],
-    });
-  }
   const imgSrc = toHttpFromTokenUri(agent.image || agent.meta?.image);
-  const supportedTrust: string[] = Array.isArray(agent.meta?.supportedTrust) ? agent.meta.supportedTrust : (agent.capabilities ?? []);
+  const supportedTrust: string[] = Array.isArray(agent.meta?.supportedTrust) ? agent.meta!.supportedTrust! : (agent.capabilities ?? []);
   const endpoints: { name?: string; endpoint?: string; version?: string }[] = Array.isArray(agent.meta?.endpoints) ? agent.meta.endpoints : [];
 
   return (

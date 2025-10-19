@@ -6,8 +6,10 @@ import AgentCard from "@/components/AgentCard";
 import FlowMap, { type AgentGraph } from "@/components/FlowMap";
 import Sidebar from "@/components/Sidebar";
 
+import type { SubgraphAgent } from "@/lib/subgraph";
+
 export default function Home() {
-	const [agents, setAgents] = React.useState<any[]>([]);
+	const [agents, setAgents] = React.useState<SubgraphAgent[]>([]);
   const listRef = React.useRef<HTMLDivElement | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
@@ -27,7 +29,7 @@ export default function Home() {
 				<div className="h-full min-h-0">
 					<FlowMap
 						graph={{
-							agents: agents.map((a: any) => ({ id: String(a.agentId), name: a.meta?.name || `Agent #${a.agentId}`, purpose: a.meta?.description || a.agentBase })),
+						agents: agents.map((a) => ({ id: String(a.agentId), name: a.meta?.name || `Agent #${a.agentId}`, purpose: a.meta?.description || a.agentBase })),
 							edges: [],
 						} as AgentGraph}
 						onSelect={(a) => {
@@ -45,14 +47,14 @@ export default function Home() {
               selectedId
                 ? {
                     id: String(selectedId),
-                    name: agents.find((x: any) => String(x.agentId) === String(selectedId))?.meta?.name || `Agent #${selectedId}`,
+							name: agents.find((x) => String(x.agentId) === String(selectedId))?.meta?.name || `Agent #${selectedId}`,
                     role:
-                      agents.find((x: any) => String(x.agentId) === String(selectedId))?.meta?.description ||
-                      agents.find((x: any) => String(x.agentId) === String(selectedId))?.agentBase ||
+							  agents.find((x) => String(x.agentId) === String(selectedId))?.meta?.description ||
+							  agents.find((x) => String(x.agentId) === String(selectedId))?.agentBase ||
                       "Autonomous Service",
-                    image: agents.find((x: any) => String(x.agentId) === String(selectedId))?.meta?.image,
-                    owner: agents.find((x: any) => String(x.agentId) === String(selectedId))?.owner,
-                    tokenURI: agents.find((x: any) => String(x.agentId) === String(selectedId))?.tokenURI,
+							image: agents.find((x) => String(x.agentId) === String(selectedId))?.meta?.image,
+							owner: agents.find((x) => String(x.agentId) === String(selectedId))?.owner,
+							tokenURI: agents.find((x) => String(x.agentId) === String(selectedId))?.tokenURI,
                   }
                 : null
             }

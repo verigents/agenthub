@@ -36,8 +36,9 @@ export default function AgentDetails({ agent }: { agent: Agent }) {
         onSuccess: () => setOk("Metadata updated"),
         onError: (e) => setError(e.message || "Failed"),
       });
-    } catch (e: any) {
-      setError(String(e?.message || e));
+    } catch (e: unknown) {
+      const message = typeof e === "object" && e && "message" in e ? String((e as { message?: unknown }).message) : String(e);
+      setError(message || "Failed");
     }
   }
 
@@ -54,8 +55,9 @@ export default function AgentDetails({ agent }: { agent: Agent }) {
         onSuccess: () => setOk("Token URI updated"),
         onError: (e) => setError(e.message || "Failed"),
       });
-    } catch (e: any) {
-      setError(String(e?.message || e));
+    } catch (e: unknown) {
+      const message = typeof e === "object" && e && "message" in e ? String((e as { message?: unknown }).message) : String(e);
+      setError(message || "Failed");
     }
   }
 
